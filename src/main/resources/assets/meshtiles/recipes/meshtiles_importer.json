@@ -1,0 +1,20 @@
+{
+  "type": "littletiles:crafting_shaped_premade",
+  "pattern": [
+    "PCP",
+    "GHG",
+    "III"
+  ],
+  "key": {
+    "P": { "item": "minecraft:paper" },
+    "C": { "item": "minecraft:compass" },
+    "G": { "item": "minecraft:glass_pane" },
+    "H": { "item": "littletiles:hammer", "data": 0 },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "item": "littletiles:premade",
+    "data": 0,
+    "structure": "meshtiles_importer"
+  }
+}

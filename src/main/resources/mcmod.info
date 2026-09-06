@@ -1,0 +1,16 @@
+[
+{
+  "modid": "meshtiles",
+  "name": "MeshTiles",
+  "description": "Imports 3D models (.obj) into Minecraft as LittleTiles: fast multithreaded voxelizer, a block and detail level per material, streamed server-side placement with progress and undo, wireframe preview.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "https://github.com/arthaix/MeshTiles",
+  "updateUrl": "",
+  "authorList": ["Aleksei Usenko (arthaix)"],
+  "credits": "Requires CreativeCore and LittleTiles by CreativeMD.",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": ["creativecore", "littletiles"]
+}
+]
