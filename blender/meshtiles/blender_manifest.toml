@@ -1,0 +1,19 @@
+schema_version = "1.0.0"
+
+id = "meshtiles"
+version = "1.0.0"
+name = "MeshTiles"
+tagline = "Minecraft blocks per material for the MeshTiles importer"
+maintainer = "Aleksei Usenko (arthaix)"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+tags = ["Import-Export", "Material"]
+
+[permissions]
+files = "Read the block list and write settings next to exported models"
