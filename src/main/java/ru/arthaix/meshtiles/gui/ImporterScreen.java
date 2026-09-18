@@ -270,7 +270,8 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
             MaterialSetup created = settings.materialOrCreate(name);
             MtlLibrary.Material mm = mtl == null ? null : mtl.materials.get(name);
             if (mm != null) {
-                created.mode = mm.mapKd != null ? MaterialSetup.ColorMode.TEXTURE : MaterialSetup.ColorMode.KD;
+                // a texture wins; without one the block keeps its own colours and Kd stays a manual choice
+                created.mode = mm.mapKd != null ? MaterialSetup.ColorMode.TEXTURE : MaterialSetup.ColorMode.NONE;
                 created.color = mm.kdArgb();
             }
             ClientPrefs.applyPreset(created); // remembered choice for this material name (from earlier imports)

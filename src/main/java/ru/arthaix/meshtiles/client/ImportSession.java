@@ -170,7 +170,8 @@ public final class ImportSession {
                     s.blockId = settings.defaultBlock;
                     MtlLibrary.Material mm = mtl.materials.get(name);
                     if (mm != null) {
-                        s.mode = mm.mapKd != null ? MaterialSetup.ColorMode.TEXTURE : MaterialSetup.ColorMode.KD;
+                        // a texture wins; without one the block keeps its own colours and Kd stays a manual choice
+                        s.mode = mm.mapKd != null ? MaterialSetup.ColorMode.TEXTURE : MaterialSetup.ColorMode.NONE;
                         s.color = mm.kdArgb();
                     }
                     ClientPrefs.applyPreset(s); // the user's remembered choice for this material name wins

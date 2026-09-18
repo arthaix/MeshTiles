@@ -14,6 +14,8 @@ Author: Aleksei Usenko (arthaix). All rights reserved: you may use the released 
 - **1 unit = 1 block**, plus a scale factor. Blender axes (Z up) by default.
 - **A block per material**: every `usemtl` material gets its own block, colour mode (none / Kd from `.mtl` /
   texture sampled from `map_Kd`), and its own detail level (1, 2, 4, 8, 16, 32 or 64 tiles per block).
+  A material with a `map_Kd` texture starts on Texture, everything else on none (the block's own colours);
+  Kd is a manual choice.
   At detail 1 the **MC** box places real Minecraft blocks instead of LittleTiles (terrain, fills, rough massing).
 - **Material order matters**: materials are placed top to bottom, and where surfaces overlap the top one wins.
   Tiles are never placed into space that is already occupied, so no z-fighting.
@@ -48,7 +50,7 @@ Importing needs creative mode or op. Every client needs the same mod jar as the 
 |---|---|
 | Snap XZ | model's min X/Z corner on the importer block |
 | Snap Y | model's lowest point on the importer block (changes when the model's bottom changes) |
-| Origin | Blender scene origin (0,0,0) on the importer block, no snapping |
+| Origin | Blender scene origin (0,0,0) on the importer block, no snapping (on by default) |
 | Rotation | whole model (frame included) rotates around the importer block |
 | Mirror X/Y/Z | flips the model inside its bounding box, the box stays |
 | Offset | added after rotation, in Blender axes (Z = up) |

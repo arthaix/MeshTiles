@@ -26,8 +26,8 @@ public final class ImportSettings {
     public boolean snapXZ = true;
     /** Vertical snap: the model's lowest point lands on the importer block. Off = height from the Blender origin (stable across re-exports). */
     public boolean snapY = false;
-    /** "Origin as in model": ignore both snaps, the Blender scene origin lands on the importer block. */
-    public boolean modelOrigin = false;
+    /** "Origin as in model": ignore both snaps, the Blender scene origin lands on the importer block. On by default. */
+    public boolean modelOrigin = true;
     public boolean previewEnabled = true;
     public String defaultBlock = "littletiles:ltcoloredblock";
     /** Placement speed slider step (see ImportSpeed). */
@@ -125,7 +125,7 @@ public final class ImportSettings {
         s.offsetZ = nbt.getInteger("mt_offz");
         s.snapXZ = !nbt.hasKey("mt_align") || nbt.getBoolean("mt_align");
         s.snapY = nbt.getBoolean("mt_aligny");
-        s.modelOrigin = nbt.getBoolean("mt_origin");
+        s.modelOrigin = !nbt.hasKey("mt_origin") || nbt.getBoolean("mt_origin");
         s.previewEnabled = !nbt.hasKey("mt_preview") || nbt.getBoolean("mt_preview");
         if (nbt.hasKey("mt_defblock")) s.defaultBlock = nbt.getString("mt_defblock");
         s.speed = nbt.hasKey("mt_speed") ? ImportSpeed.clamp(nbt.getInteger("mt_speed")) : ImportSpeed.MAX_INDEX;
