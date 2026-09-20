@@ -52,6 +52,7 @@ public final class RecipeBuilder {
                     if (id <= 0 || id >= paletteSize) continue;
                     int m = part.palette.material(id);
                     MaterialSetup setup = m >= 0 && m < materials.size() ? materials.get(m) : null;
+                    if (setup != null && setup.isAir()) continue; // a recipe builds, it cannot clear
                     String block = setup == null ? "littletiles:ltcoloredblock" : setup.blockId;
                     int color = part.palette.color(id);
                     String gk = block + "#" + color;

@@ -20,9 +20,22 @@ public final class MaterialSetup {
         }
     }
 
+    /** Block id of the "clear the space" material: its volume is emptied instead of filled. */
+    public static final String AIR = "minecraft:air";
+
     /** True when this material is imported as real Minecraft blocks (grid 1 and the option ticked). */
     public boolean placesSolidBlocks() {
-        return solidBlocks && grid == 1;
+        return solidBlocks && grid == 1 && !isAir();
+    }
+
+    /** True when this material removes whatever stands in its volume instead of placing anything. */
+    public boolean isAir() {
+        return AIR.equals(blockId);
+    }
+
+    /** Grid this material is voxelized in: air clears whole blocks, so it always works at grid 1. */
+    public int effectiveGrid() {
+        return isAir() ? 1 : grid;
     }
 
     public final String name;

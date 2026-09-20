@@ -131,7 +131,7 @@ public final class ImportJobManager {
         String name = requester.getName();
         ImportHistory history = ImportHistory.get((WorldServer) requester.world);
         ImportHistory.Entry entry = id > 0 ? history.find(id) : history.lastOf(uid);
-        if (entry == null || entry.undoBlocks == 0) {
+        if (entry == null || (entry.undoBlocks == 0 && entry.clearedBlocks == 0)) {
             chat(requester, TextFormatting.GRAY + (id > 0 ? "Import #" + id + " is not in the history." : "Nothing to undo."));
             return false;
         }
@@ -143,10 +143,13 @@ public final class ImportJobManager {
         File file = ImportHistory.undoFile(world, entry.id);
         history.remove(entry);
         loading.add(uid);
-        chat(requester, TextFormatting.YELLOW + "Undoing import #" + entry.id + " (" + entry.undoBlocks + " blocks)...");
+        chat(requester, TextFormatting.YELLOW + "Undoing import #" + entry.id + " (" + entry.undoBlocks + " blocks"
+            + (entry.clearedBlocks > 0 ? ", " + entry.clearedBlocks + " to put back" : "") + ")...");
         HistoryIO.read(file, UndoLog::load, log -> {
             loading.remove(uid);
             ImportJob job = new ImportJob(entry, log, world, uid, name);
+            job.restoreCleared = entry.clearedBlocks > 0 ? entry.id : 0;
+            job.clearedDim = entry.dim;
             active.put(uid, job);
             HistoryIO.delete(file);
             job.log("undo started (" + log.size() + " blocks)");
@@ -221,6 +224,33 @@ public final class ImportJobManager {
         }
         job.log("undone");
         if (player != null) chat(player, TextFormatting.GREEN + "Import #" + job.historyId + " undone." + hint);
+        if (job.restoreCleared > 0) restoreCleared(job, player);
+    }
+
+    /** Puts back the blocks an "air" material removed, through the normal placement path. */
+    private void restoreCleared(ImportJob undone, EntityPlayerMP player) {
+        final int importId = undone.restoreCleared;
+        final WorldServer world = undone.world;
+        File file = RedoLog.clearedFile(world, undone.clearedDim, importId);
+        if (player == null) return; // the data stays on disk until someone undoes it again
+        final UUID uid = player.getUniqueID();
+        loading.add(uid);
+        HistoryIO.read(file, RedoLog::read, log -> {
+            loading.remove(uid);
+            EntityPlayerMP p = player(uid);
+            ImportJob job = p == null ? null : begin(p, world, 0, log.maxGrid, log.blocks.size(), log.boxCount, log.palette());
+            if (job == null) return;
+            job.restoredOf = importId;
+            job.enqueue(log.blocks);
+            job.endReceived = true;
+            HistoryIO.delete(file);
+            job.log("restoring what #" + importId + " cleared (" + log.blocks.size() + " blocks)");
+        }, error -> {
+            loading.remove(uid);
+            MeshTiles.logger.warn("Cleared data of import #" + importId + " could not be read: " + error);
+            EntityPlayerMP p = player(uid);
+            if (p != null) chat(p, TextFormatting.RED + "What import #" + importId + " cleared could not be restored: " + error);
+        });
     }
 
     public void list(ICommandSender sender, WorldServer world) {
@@ -252,7 +282,8 @@ public final class ImportJobManager {
     private void finishJob(ImportJob job, EntityPlayerMP owner) {
         job.removeBar();
         active.remove(job.playerId);
-        if (job.hasUndoData() && (job.state == ImportJob.State.DONE || job.state == ImportJob.State.CANCELLED)) {
+        boolean hasCleared = job.cleared != null && !job.cleared.isEmpty();
+        if ((job.hasUndoData() || hasCleared) && (job.state == ImportJob.State.DONE || job.state == ImportJob.State.CANCELLED)) {
             ImportHistory history = ImportHistory.get(job.world);
             ImportHistory.Entry e = new ImportHistory.Entry();
             e.id = job.historyId;
@@ -263,10 +294,19 @@ public final class ImportJobManager {
             e.blocks = job.placed;
             e.tiles = job.tilesPlaced;
             e.summary = job.summary() + (job.state == ImportJob.State.CANCELLED ? " (cancelled)" : "");
-            e.undoBlocks = job.undo.size();
-            job.undo.finishRecording();
-            HistoryIO.write(ImportHistory.undoFile(job.world, e.id), job.undo, UndoLog::save);
-            for (ImportHistory.Entry dropped : history.add(e)) HistoryIO.delete(ImportHistory.undoFile(job.world, dropped.id));
+            e.undoBlocks = job.undo == null ? 0 : job.undo.size();
+            if (job.undo != null) {
+                job.undo.finishRecording();
+                HistoryIO.write(ImportHistory.undoFile(job.world, e.id), job.undo, UndoLog::save);
+            }
+            if (hasCleared) {
+                e.clearedBlocks = job.cleared.blocks.size();
+                HistoryIO.write(RedoLog.clearedFile(job.world, e.dim, e.id), job.cleared, RedoLog::save);
+            }
+            for (ImportHistory.Entry dropped : history.add(e)) {
+                HistoryIO.delete(ImportHistory.undoFile(job.world, dropped.id));
+                HistoryIO.delete(RedoLog.clearedFile(job.world, dropped.dim, dropped.id));
+            }
         }
         if (owner != null) sendStatus(owner, job, "");
     }

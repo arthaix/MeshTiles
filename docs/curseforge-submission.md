@@ -17,8 +17,8 @@ Create the project at https://authors.curseforge.com/ → Start a Project → Mi
 
 | Field | Value |
 |---|---|
-| File | `build/libs/meshtiles-1.0.1.jar` (the non-`-dev` jar) |
-| Display name | MeshTiles 1.0.1 |
+| File | `build/libs/meshtiles-1.0.2.jar` (the non-`-dev` jar) |
+| Display name | MeshTiles 1.0.2 |
 | Release type | Release |
 | Game versions | Minecraft 1.12.2, Forge, Java 8 |
 | Changelog | First release. |

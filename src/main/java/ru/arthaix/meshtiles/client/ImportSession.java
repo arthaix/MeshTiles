@@ -18,6 +18,7 @@ import ru.arthaix.meshtiles.model.ObjMesh;
 import ru.arthaix.meshtiles.model.ObjStreamParser;
 import ru.arthaix.meshtiles.network.PacketImportStatus;
 import ru.arthaix.meshtiles.server.ImportJob;
+import ru.arthaix.meshtiles.voxel.AirFill;
 import ru.arthaix.meshtiles.voxel.ColorSampler;
 import ru.arthaix.meshtiles.voxel.MaterialSetup;
 import ru.arthaix.meshtiles.voxel.MultiModel;
@@ -203,8 +204,10 @@ public final class ImportSession {
             for (int i = 0; i < setups.size(); i++) aligned[i] = !setups.get(i).skip;
             vs.alignmentMaterials = aligned;
             // one voxelizer pass per grid: materials of other grids are treated as skipped in that pass
+            boolean[] airMaterial = new boolean[setups.size()];
+            for (int i = 0; i < setups.size(); i++) airMaterial[i] = !setups.get(i).skip && setups.get(i).isAir();
             java.util.TreeSet<Integer> grids = new java.util.TreeSet<>();
-            for (int i = 0; i < setups.size(); i++) if (!setups.get(i).skip) grids.add(setups.get(i).grid);
+            for (int i = 0; i < setups.size(); i++) if (!setups.get(i).skip) grids.add(setups.get(i).effectiveGrid());
             if (grids.isEmpty()) grids.add(16);
             Voxelizer.Stats stats = new Voxelizer.Stats();
             List<VoxelModel> parts = new ArrayList<>();
@@ -213,7 +216,7 @@ public final class ImportSession {
                 VoxelizerSettings gs = vs.copy();
                 gs.grid = grid;
                 boolean[] skipHere = new boolean[setups.size()];
-                for (int i = 0; i < setups.size(); i++) skipHere[i] = setups.get(i).skip || setups.get(i).grid != grid;
+                for (int i = 0; i < setups.size(); i++) skipHere[i] = setups.get(i).skip || setups.get(i).effectiveGrid() != grid;
                 gs.skippedMaterials = skipHere;
                 ColorSampler passSampler = sampler.withSkipped(skipHere);
                 final int passIndex = pass++, passCount = grids.size();
@@ -228,6 +231,14 @@ public final class ImportSession {
                 }
                 stats.regions += passStats.regions;
                 stats.trianglesDegenerate += passStats.trianglesDegenerate;
+                if (grid == 1) {
+                    // an air material only has a surface after voxelizing: fill what it encloses, so it clears the whole volume
+                    AirFill.Result fill = AirFill.fill(part, airMaterial);
+                    if (fill.tooBig)
+                        problems.add("The air material spans more than " + AirFill.MAX_CELLS / 1000000 + " million blocks: only its surface is cleared");
+                    else if (fill.filledBlocks > 0)
+                        MeshTiles.logger.info("Air fill: " + fill.filledBlocks + " blocks inside " + fill.shellBlocks + " surface blocks");
+                }
                 parts.add(part);
             }
             MultiModel result = new MultiModel(parts);

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'ru.arthaix.meshtiles'
-version = '1.0.1'
+version = '1.0.2'
 archivesBaseName = 'meshtiles'
 
 // Minecraft 1.12.2 needs Java 8 bytecode (FML's ASM cannot read newer class files)

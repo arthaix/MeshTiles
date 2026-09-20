@@ -26,6 +26,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import ru.arthaix.meshtiles.MeshTiles;
 import ru.arthaix.meshtiles.common.BlockRef;
+import ru.arthaix.meshtiles.voxel.MaterialSetup;
 
 /**
  * Writes every block the importer can use (the same list as its block selector) to .minecraft/meshtiles/blocks.json,
@@ -50,6 +51,13 @@ public final class BlockListExporter {
             HashMapList<String, ItemStack> stacks = new GuiStackSelectorAll.CreativeCollector(new LittleSubGuiUtils.LittleBlockSelector()).collect(player);
             JsonArray blocks = new JsonArray();
             Set<String> seen = new HashSet<>();
+            // not a block, but the add-on should be able to pick it: this material clears the space instead of building
+            JsonObject air = new JsonObject();
+            air.addProperty("id", MaterialSetup.AIR);
+            air.addProperty("name", "Air (clears space)");
+            air.addProperty("group", "MeshTiles");
+            blocks.add(air);
+            seen.add(MaterialSetup.AIR);
             for (Map.Entry<String, ArrayList<ItemStack>> e : stacks.entrySet()) {
                 String group = I18n.format(e.getKey());
                 for (ItemStack stack : e.getValue()) {

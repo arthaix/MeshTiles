@@ -24,6 +24,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import ru.arthaix.meshtiles.client.ClientPrefs;
 import ru.arthaix.meshtiles.common.BlockRef;
+import ru.arthaix.meshtiles.voxel.MaterialSetup;
 
 /** Recently used blocks on top, then a grid of every block LittleTiles can use, with a search field. */
 @SideOnly(Side.CLIENT)
@@ -61,6 +62,7 @@ public class GuiBlockPicker extends GuiScreen {
         search.setFocused(true);
         buttonList.clear();
         buttonList.add(new GuiButton(1, left + W - 66, top + H - 24, 60, 20, "Cancel"));
+        buttonList.add(new GuiButton(2, left + W - 206, top + H - 24, 134, 20, "Air (clears space)"));
         if (all == null) all = collect();
         loadRecent();
         refilter();
@@ -239,6 +241,11 @@ public class GuiBlockPicker extends GuiScreen {
     @Override
     protected void actionPerformed(GuiButton button) {
         if (button.id == 1) mc.displayGuiScreen(parent);
+        if (button.id == 2) {
+            // not a real block: the material removes whatever stands in its volume
+            onPick.accept(MaterialSetup.AIR);
+            mc.displayGuiScreen(parent);
+        }
     }
 
     @Override

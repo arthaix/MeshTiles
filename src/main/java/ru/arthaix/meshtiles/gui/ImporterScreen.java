@@ -583,26 +583,34 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
             drawString(fontRenderer, (m.skip ? TextFormatting.DARK_GRAY.toString() : "") + fontRenderer.trimStringToWidth(m.name, 90), x0 + 4, ry + 6, 0xFFFFFF);
 
             cell(x0 + C_BLOCK, ry + 2, C_BLOCK_W, 16, rowHover && over(rx, C_BLOCK, C_BLOCK_W));
-            ItemStack stack = BlockRef.parse(m.blockId).toStack();
-            RenderHelper.enableGUIStandardItemLighting();
-            itemRender.renderItemAndEffectIntoGUI(stack, x0 + C_BLOCK + 1, ry + 2);
-            RenderHelper.disableStandardItemLighting();
+            boolean air = m.isAir();
+            if (air) {
+                drawRect(x0 + C_BLOCK + 2, ry + 3, x0 + C_BLOCK + 16, ry + 17, 0xFF101010);
+                drawRect(x0 + C_BLOCK + 3, ry + 4, x0 + C_BLOCK + 15, ry + 16, 0xFF2A2A2A);
+                drawString(fontRenderer, TextFormatting.AQUA + "Air (clear)", x0 + C_BLOCK + 19, ry + 6, 0xFFFFFF);
+            } else {
+                ItemStack stack = BlockRef.parse(m.blockId).toStack();
+                RenderHelper.enableGUIStandardItemLighting();
+                itemRender.renderItemAndEffectIntoGUI(stack, x0 + C_BLOCK + 1, ry + 2);
+                RenderHelper.disableStandardItemLighting();
+                drawString(fontRenderer, fontRenderer.trimStringToWidth(stack.getDisplayName(), C_BLOCK_W - 22), x0 + C_BLOCK + 19, ry + 6, m.skip ? 0x707070 : 0xFFFFFF);
+            }
             boolean solidBlocks = m.placesSolidBlocks();
-            drawString(fontRenderer, fontRenderer.trimStringToWidth(stack.getDisplayName(), C_BLOCK_W - 22), x0 + C_BLOCK + 19, ry + 6, m.skip ? 0x707070 : 0xFFFFFF);
 
-            cell(x0 + C_GRID, ry + 2, C_GRID_W, 16, rowHover && over(rx, C_GRID, C_GRID_W));
-            drawCenteredString(fontRenderer, String.valueOf(m.grid), x0 + C_GRID + C_GRID_W / 2, ry + 6, 0xFFFFFF);
+            cell(x0 + C_GRID, ry + 2, C_GRID_W, 16, rowHover && !air && over(rx, C_GRID, C_GRID_W));
+            drawCenteredString(fontRenderer, air ? TextFormatting.DARK_GRAY + "1" : String.valueOf(m.grid), x0 + C_GRID + C_GRID_W / 2, ry + 6, 0xFFFFFF);
 
-            cell(x0 + C_MODE, ry + 2, C_MODE_W, 16, rowHover && over(rx, C_MODE, C_MODE_W));
-            drawCenteredString(fontRenderer, solidBlocks ? TextFormatting.DARK_GRAY + "block" : MODE_NAMES[m.mode.ordinal()], x0 + C_MODE + C_MODE_W / 2, ry + 6, 0xFFFFFF);
+            cell(x0 + C_MODE, ry + 2, C_MODE_W, 16, rowHover && !air && over(rx, C_MODE, C_MODE_W));
+            drawCenteredString(fontRenderer, air ? TextFormatting.DARK_GRAY + "clear" : solidBlocks ? TextFormatting.DARK_GRAY + "block" : MODE_NAMES[m.mode.ordinal()],
+                x0 + C_MODE + C_MODE_W / 2, ry + 6, 0xFFFFFF);
 
             boolean swatchHover = rowHover && over(rx, C_SWATCH, C_SWATCH_W);
             drawRect(x0 + C_SWATCH, ry + 2, x0 + C_SWATCH + C_SWATCH_W, ry + 18, swatchHover ? 0xFFFFFFFF : 0xFF606060);
             drawRect(x0 + C_SWATCH + 1, ry + 3, x0 + C_SWATCH + C_SWATCH_W - 1, ry + 17, 0xFF000000 | (m.color & 0xFFFFFF));
             if (m.mode == MaterialSetup.ColorMode.NONE || solidBlocks) drawRect(x0 + C_SWATCH + 1, ry + 3, x0 + C_SWATCH + C_SWATCH_W - 1, ry + 17, 0xA0000000);
 
-            cell(x0 + C_MC, ry + 2, C_MC_W, 16, rowHover && over(rx, C_MC, C_MC_W));
-            TextFormatting mcColor = m.solidBlocks ? (m.grid == 1 ? TextFormatting.GREEN : TextFormatting.DARK_GREEN) : TextFormatting.DARK_GRAY;
+            cell(x0 + C_MC, ry + 2, C_MC_W, 16, rowHover && !air && over(rx, C_MC, C_MC_W));
+            TextFormatting mcColor = !air && m.solidBlocks ? (m.grid == 1 ? TextFormatting.GREEN : TextFormatting.DARK_GREEN) : TextFormatting.DARK_GRAY;
             drawCenteredString(fontRenderer, mcColor + "MC", x0 + C_MC + C_MC_W / 2, ry + 6, 0xFFFFFF);
 
             cell(x0 + C_SKIP, ry + 2, C_SKIP_W, 16, rowHover && over(rx, C_SKIP, C_SKIP_W));
@@ -669,7 +677,11 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
             if (i < 0 || i >= shown.size()) return;
             int rx = mx - x0;
             String[] lines = null;
+            MaterialSetup hovered = setup(shown.get(i));
             if (rx < C_BLOCK) lines = new String[] { shown.get(i) };
+            else if (hovered.isAir() && rx >= C_BLOCK && rx < C_SKIP)
+                lines = new String[] { "Air: clears the space instead of building", "Whole blocks, everything the closed surface encloses",
+                    "LittleTiles structures and blocks with contents are left alone", "Undo puts back what was cleared" };
             else if (over(rx, C_BLOCK, C_BLOCK_W)) lines = new String[] { "Block for this material", "Click to choose" };
             else if (over(rx, C_GRID, C_GRID_W)) lines = new String[] { "Detail: tiles per block edge", "1 = whole blocks, 64 = finest", "Right-click: previous" };
             else if (over(rx, C_MODE, C_MODE_W)) lines = new String[] { "None: plain block, no tint", "Kd: flat colour (the swatch)", "Texture: colour sampled from map_Kd per tile", "Right-click: previous" };
@@ -780,6 +792,7 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
             return;
         }
         if (over(rx, C_SWATCH, C_SWATCH_W)) {
+            if (m.isAir()) return;
             collect();
             mc.displayGuiScreen(new GuiColorPicker(this, m.color, c -> {
                 m.color = c;
@@ -788,6 +801,8 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
             return;
         }
         int dir = button == 1 ? -1 : 1;
+        if (m.isAir() && (over(rx, C_GRID, C_GRID_W) || over(rx, C_MODE, C_MODE_W) || over(rx, C_MC, C_MC_W)))
+            return; // air always clears whole blocks: detail, colour and MC mean nothing for it
         if (over(rx, C_GRID, C_GRID_W)) {
             int[] grids = gridSizes();
             int at = 0;

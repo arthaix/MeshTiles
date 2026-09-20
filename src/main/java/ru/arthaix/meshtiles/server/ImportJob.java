@@ -33,6 +33,7 @@ import ru.arthaix.meshtiles.common.BlockRef;
 import ru.arthaix.meshtiles.common.ChunkCodec;
 import ru.arthaix.meshtiles.common.ImportPalette;
 import ru.arthaix.meshtiles.common.ImportSpeed;
+import ru.arthaix.meshtiles.voxel.MaterialSetup;
 import ru.arthaix.meshtiles.voxel.PackedBox;
 
 /** One streamed import for one player: receives block batches and writes them into the world under a per-tick budget. */
@@ -53,6 +54,8 @@ public final class ImportJob {
     private final BlockRef[] blocks;
     private final int[] colors;
     private final boolean[] solid;
+    /** Per palette id: this is the "air" material, its blocks are cleared instead of filled. */
+    private final boolean[] air;
 
     private final ArrayDeque<ChunkCodec.Block> queue = new ArrayDeque<>();
     public State state = State.RECEIVING;
@@ -67,10 +70,20 @@ public final class ImportJob {
     public boolean endReceived;
     public int lastSeq = -1;
     public UndoLog undo = MeshTilesConfig.keepUndo ? new UndoLog() : null;
+    /** What an "air" material removed from the world, in the form a placement job can put back. */
+    public RedoLog cleared = MeshTilesConfig.keepUndo ? new RedoLog() : null;
+    public int clearedBlocks, skippedStructure;
+    /** Tile entities taken out this tick: they leave the world's lists in one pass at the end of the tick. */
+    private final List<TileEntity> detached = new ArrayList<>();
     /** While undoing: what was taken out, so it can be put back. */
     public RedoLog redo;
     /** History id this job puts back (0 = a normal import). */
     public int redoOf;
+    /** Set on an undo job when the import it takes back had cleared blocks that must be restored afterwards. */
+    public int restoreCleared;
+    public int clearedDim;
+    /** Set on the job that puts cleared blocks back. */
+    public int restoredOf;
     public final long startMillis = System.currentTimeMillis();
     private int undoCursor;
     private Iterator<Map.Entry<Long, UndoLog.Appended>> undoAppended;
@@ -87,8 +100,11 @@ public final class ImportJob {
         this.blocks = new BlockRef[palette.size()];
         this.colors = palette.colors;
         this.solid = palette.solid;
-        for (int i = 1; i < palette.size(); i++)
+        this.air = new boolean[palette.size()];
+        for (int i = 1; i < palette.size(); i++) {
+            air[i] = MaterialSetup.AIR.equals(palette.blockIds[i]);
             blocks[i] = BlockRef.parse(palette.blockIds[i]);
+        }
     }
 
     /** A job that only undoes a history entry. */
@@ -104,6 +120,7 @@ public final class ImportJob {
         this.blocks = new BlockRef[0];
         this.colors = new int[0];
         this.solid = new boolean[0];
+        this.air = new boolean[0];
         this.undo = log;
         this.state = State.UNDOING;
         this.undoAppended = undo.appended.entrySet().iterator();
@@ -147,6 +164,7 @@ public final class ImportJob {
             n++;
             if ((n & 7) == 0 && System.nanoTime() > deadlineNanos) break;
         }
+        flushDetached();
         if (queue.isEmpty() && endReceived) state = State.DONE;
         return n;
     }
@@ -160,6 +178,10 @@ public final class ImportJob {
         long key = data.key;
         world.getChunk(pos); // loads the chunk if needed
         IBlockState state = world.getBlockState(pos);
+        if (holdsAir(data)) {
+            clearBlock(pos, key, state);
+            return;
+        }
         if (data.grid == 1 && data.boxes.length == 1) {
             int idx = PackedBox.id(data.boxes[0]);
             if (idx > 0 && idx < blocks.length && solid[idx]) {
@@ -242,6 +264,56 @@ public final class ImportJob {
         }
         placed++;
         tilesPlaced += tiles.size();
+    }
+
+    /** True when any box of this block belongs to an "air" material. */
+    private boolean holdsAir(ChunkCodec.Block data) {
+        for (long box : data.boxes) {
+            int idx = PackedBox.id(box);
+            if (idx > 0 && idx < air.length && air[idx]) return true;
+        }
+        return false;
+    }
+
+    /**
+     * An "air" material: the whole block is taken out of the world and written to the cleared log, so an undo can
+     * put it back. Blocks that hold something the log cannot describe are left standing: tile entities other than
+     * LittleTiles (chests, rails, machines) and LittleTiles blocks that are part of a structure (doors, chairs).
+     */
+    private void clearBlock(BlockPos pos, long key, IBlockState state) {
+        if (state.getBlock() == net.minecraft.init.Blocks.AIR) return;
+        TileEntity te = state.getBlock().hasTileEntity(state) ? world.getTileEntity(pos) : null;
+        if (te != null && !(te instanceof TileEntityLittleTiles)) {
+            skippedProtected++;
+            return;
+        }
+        if (te instanceof TileEntityLittleTiles) {
+            TileEntityLittleTiles lt = (TileEntityLittleTiles) te;
+            for (Pair<IParentTileList, LittleTile> p : lt.allTiles())
+                if (p.key.isStructure()) {
+                    skippedStructure++;
+                    return;
+                }
+            if (cleared != null) cleared.addTiles(key, lt.getContext().size, lt.noneStructureTiles());
+        } else if (cleared != null) {
+            cleared.addSolid(key, state);
+        }
+        if (te != null) {
+            // same reason as in the undo: removing a tile entity the vanilla way is a linear scan of every loaded one
+            world.getChunk(pos).getTileEntityMap().remove(pos);
+            te.invalidate();
+            detached.add(te);
+        }
+        world.setBlockState(pos, net.minecraft.init.Blocks.AIR.getDefaultState(), 2);
+        placed++;
+        clearedBlocks++;
+    }
+
+    private void flushDetached() {
+        if (detached.isEmpty()) return;
+        world.loadedTileEntityList.removeAll(detached);
+        world.tickableTileEntities.removeAll(detached);
+        detached.clear();
     }
 
     /** A grid-1 material with "MC" on: the real block goes into the world, no LittleTiles involved. */
@@ -454,8 +526,11 @@ public final class ImportJob {
         long secs = (System.currentTimeMillis() - startMillis) / 1000;
         StringBuilder sb = new StringBuilder();
         if (redoOf > 0) sb.append("redo of #").append(redoOf).append(": ");
+        if (restoredOf > 0) sb.append("restored what #").append(restoredOf).append(" cleared: ");
         sb.append(placed).append('/').append(totalBlocks).append(" blocks, ").append(tilesPlaced).append(" tiles, ").append(secs).append(" s");
         if (solidPlaced > 0) sb.append(", ").append(solidPlaced).append(" solid blocks");
+        if (clearedBlocks > 0) sb.append(", ").append(clearedBlocks).append(" blocks cleared");
+        if (skippedStructure > 0) sb.append(", ").append(skippedStructure).append(" kept (structures)");
         if (skippedProtected > 0) sb.append(", ").append(skippedProtected).append(" skipped (solid)");
         if (skippedDense > 0) sb.append(", ").append(skippedDense).append(" skipped (too dense)");
         if (skippedHeight > 0) sb.append(", ").append(skippedHeight).append(" skipped (out of world)");

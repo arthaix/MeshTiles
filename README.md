@@ -17,6 +17,9 @@ Author: Aleksei Usenko (arthaix). All rights reserved: you may use the released 
   A material with a `map_Kd` texture starts on Texture, everything else on none (the block's own colours);
   Kd is a manual choice.
   At detail 1 the **MC** box places real Minecraft blocks instead of LittleTiles (terrain, fills, rough massing).
+- **Air clears space**: pick "Air (clears space)" as the block of a material and its volume is emptied instead of built.
+  Whole blocks, and everything a closed surface encloses (model a box, get a pit). Blocks with contents (chests, rails,
+  machines) and LittleTiles structures are left standing; undo puts back everything that was cleared.
 - **Material order matters**: materials are placed top to bottom, and where surfaces overlap the top one wins.
   Tiles are never placed into space that is already occupied, so no z-fighting.
 - **Server-side placement** with a per-tick budget, a progress bar with time left, cancel, and a persistent import history

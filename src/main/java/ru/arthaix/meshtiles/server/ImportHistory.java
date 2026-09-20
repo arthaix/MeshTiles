@@ -33,6 +33,8 @@ public final class ImportHistory extends WorldSavedData {
         public String summary = "";
         /** Blocks the undo will visit (0 = nothing to undo). */
         public int undoBlocks;
+        /** Blocks an "air" material removed; the undo puts them back from the cleared file. */
+        public int clearedBlocks;
         /** Undo data found inline in an old-format history file; moved to its own file right after loading. */
         UndoLog legacyUndo;
 
@@ -47,6 +49,7 @@ public final class ImportHistory extends WorldSavedData {
             nbt.setLong("tiles", tiles);
             nbt.setString("summary", summary);
             nbt.setInteger("undoBlocks", undoBlocks);
+            if (clearedBlocks > 0) nbt.setInteger("clearedBlocks", clearedBlocks);
             return nbt;
         }
 
@@ -61,6 +64,7 @@ public final class ImportHistory extends WorldSavedData {
             e.tiles = nbt.getLong("tiles");
             e.summary = nbt.getString("summary");
             e.undoBlocks = nbt.getInteger("undoBlocks");
+            e.clearedBlocks = nbt.getInteger("clearedBlocks");
             if (nbt.hasKey("undo", 10)) {
                 try {
                     e.legacyUndo = UndoLog.read(nbt.getCompoundTag("undo"));

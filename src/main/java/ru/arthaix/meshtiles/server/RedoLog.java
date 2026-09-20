@@ -119,6 +119,12 @@ public final class RedoLog {
         return new File(dir, "dim" + dim + "_" + id + ".dat");
     }
 
+    /** Where the blocks an "air" material removed during import {@code id} are kept. */
+    public static File clearedFile(WorldServer anyWorld, int dim, int id) {
+        File dir = new File(anyWorld.getSaveHandler().getWorldDirectory(), "data/meshtiles_cleared");
+        return new File(dir, "dim" + dim + "_" + id + ".dat");
+    }
+
     public static void save(RedoLog log, File f) throws IOException {
         log.write(f);
     }
