@@ -14,7 +14,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 /** Red / green / blue / opacity sliders and a hex field. */
 @SideOnly(Side.CLIENT)
-public class GuiColorPicker extends GuiScreen implements GuiSlider.ISlider {
+public class GuiColorPicker extends CompactScreen implements GuiSlider.ISlider {
 
     private static final int W = 230, H = 172;
     private static final int ACCENT = 0xFF00B8CC;
@@ -31,6 +31,16 @@ public class GuiColorPicker extends GuiScreen implements GuiSlider.ISlider {
         this.parent = parent;
         this.argb = argb;
         this.onPick = onPick;
+    }
+
+    @Override
+    protected int neededWidth() {
+        return W + 4;
+    }
+
+    @Override
+    protected int neededHeight() {
+        return H + 4;
     }
 
     @Override
@@ -71,12 +81,12 @@ public class GuiColorPicker extends GuiScreen implements GuiSlider.ISlider {
     }
 
     @Override
-    public void drawScreen(int mx, int my, float partialTicks) {
+    protected void drawContent(int mx, int my, float partialTicks) {
         drawDefaultBackground();
         drawRect(left, top, left + W, top + H, 0xF0101010);
         drawRect(left, top, left + W, top + 1, ACCENT);
         drawString(fontRenderer, "Colour", left + 10, top + 7, 0xFFFFFF);
-        super.drawScreen(mx, my, partialTicks);
+        super.drawContent(mx, my, partialTicks);
         hex.drawTextBox();
         int sx = left + 90, sy = top + 120;
         // checkerboard behind the swatch shows the opacity

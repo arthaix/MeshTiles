@@ -18,9 +18,7 @@ import com.creativemd.littletiles.common.util.grid.LittleGridContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
@@ -52,7 +50,7 @@ import ru.arthaix.meshtiles.voxel.MultiModel;
 
 /** The importer's screen: model file, placement, one row per material, voxelize / place / undo. */
 @SideOnly(Side.CLIENT)
-public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
+public class ImporterScreen extends CompactScreen implements GuiSlider.ISlider {
 
     private static final int W = 440, H = 262;
     private static final int LIST_Y = 92, LIST_H = 96, ROW_H = 20;
@@ -91,6 +89,16 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
         ImportSession.INSTANCE.previewEnabled = settings.previewEnabled;
         ImportSession.INSTANCE.speed = settings.speed;
         sentSpeed = settings.speed;
+    }
+
+    @Override
+    protected int neededWidth() {
+        return W + 4;
+    }
+
+    @Override
+    protected int neededHeight() {
+        return H + 4;
     }
 
     @Override
@@ -507,7 +515,7 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
     // ---- drawing ------------------------------------------------------------------------------------------
 
     @Override
-    public void drawScreen(int mx, int my, float partialTicks) {
+    protected void drawContent(int mx, int my, float partialTicks) {
         drawDefaultBackground();
         drawRect(left, top, left + W, top + H, 0xF0101010);
         drawRect(left, top, left + W, top + 1, ACCENT);
@@ -529,7 +537,7 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
         drawString(fontRenderer, fontRenderer.trimStringToWidth(statusText(), textW), left + 6, py + 9, 0xFFFFFF);
         drawString(fontRenderer, fontRenderer.trimStringToWidth(TextFormatting.AQUA + session.serverStatusText, textW), left + 6, py + 21, 0xFFFFFF);
 
-        super.drawScreen(mx, my, partialTicks);
+        super.drawContent(mx, my, partialTicks);
 
         ItemStack def = BlockRef.parse(settings.defaultBlock).toStack();
         RenderHelper.enableGUIStandardItemLighting();
@@ -569,7 +577,7 @@ public class ImporterScreen extends GuiScreen implements GuiSlider.ISlider {
         String header = "Materials: " + shown.size() + (shown.isEmpty() ? "   choose a model and press Scan" : "   top is placed first and wins overlaps");
         drawString(fontRenderer, header, x0, y0 - 11, 0xFFFFFF);
         drawRect(x0, y0, x0 + w, y0 + LIST_H, 0xFF000000);
-        int sf = new ScaledResolution(mc).getScaleFactor();
+        int sf = guiScale;
         GL11.glEnable(GL11.GL_SCISSOR_TEST);
         GL11.glScissor(x0 * sf, mc.displayHeight - (y0 + LIST_H) * sf, w * sf, LIST_H * sf);
         boolean inList = mx >= x0 && mx < x0 + w && my >= y0 && my < y0 + LIST_H;

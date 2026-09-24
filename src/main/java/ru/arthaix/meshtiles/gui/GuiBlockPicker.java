@@ -28,7 +28,7 @@ import ru.arthaix.meshtiles.voxel.MaterialSetup;
 
 /** Recently used blocks on top, then a grid of every block LittleTiles can use, with a search field. */
 @SideOnly(Side.CLIENT)
-public class GuiBlockPicker extends GuiScreen {
+public class GuiBlockPicker extends CompactScreen {
 
     private static final int COLS = 18, ROWS = 10, SLOT = 18;
     private static final int RECENT_Y = 36, GRID_Y = RECENT_Y + SLOT + 16;
@@ -49,6 +49,16 @@ public class GuiBlockPicker extends GuiScreen {
         this.parent = parent;
         this.current = current;
         this.onPick = onPick;
+    }
+
+    @Override
+    protected int neededWidth() {
+        return W + 4;
+    }
+
+    @Override
+    protected int neededHeight() {
+        return H + 4;
     }
 
     @Override
@@ -130,7 +140,7 @@ public class GuiBlockPicker extends GuiScreen {
     }
 
     @Override
-    public void drawScreen(int mx, int my, float partialTicks) {
+    protected void drawContent(int mx, int my, float partialTicks) {
         drawDefaultBackground();
         drawRect(left, top, left + W, top + H, 0xF0101010);
         drawRect(left, top, left + W, top + 1, ACCENT);
@@ -166,7 +176,7 @@ public class GuiBlockPicker extends GuiScreen {
         RenderHelper.disableStandardItemLighting();
 
         drawString(fontRenderer, filtered.size() + " blocks" + (maxScroll() > 0 ? "   (mouse wheel to scroll)" : ""), left + 6, top + H - 18, 0x808080);
-        super.drawScreen(mx, my, partialTicks);
+        super.drawContent(mx, my, partialTicks);
         if (hovered != null) {
             try {
                 renderToolTip(hovered, mx, my);

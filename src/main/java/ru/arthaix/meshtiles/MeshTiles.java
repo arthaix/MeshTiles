@@ -43,7 +43,7 @@ public class MeshTiles {
 
     public static final String MOD_ID = "meshtiles";
     public static final String NAME = "MeshTiles";
-    public static final String VERSION = "1.0.2";
+    public static final String VERSION = "1.0.3";
     /** Premade structure id of the importer block (assets/meshtiles/premade/meshtiles_importer.struct). */
     public static final String IMPORTER_ID = "meshtiles_importer";
     public static Logger logger;
